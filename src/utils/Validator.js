@@ -12,4 +12,36 @@ const validateSignupData = (req) => {
   }
 };
 
-module.exports = { validateSignupData };
+const validateEditProfileData = (req) => {
+  const { firstName, lastName, age, gender, photoUrl, skills, about } =
+    req.body;
+  const ALLOWED_FIELDS = [
+    "firstName",
+    "lastName",
+    "age",
+    "gender",
+    "photoUrl",
+    "skills",
+    "about",
+  ];
+
+  if (skills.length > 10) {
+    throw new Error("Skills cannot be more than 10");
+  }
+
+  // if (!validator.isURL(photoUrl)) {
+  //   throw new Error("Invalid photo URL");
+  // }
+
+  if (about.length > 40) {
+    throw new Error("about cannot exceed 40 characters!");
+  }
+
+  const isEditAllowed = Object.keys(req.body).every((field) =>
+    ALLOWED_FIELDS.includes(field)
+  );
+
+  return isEditAllowed;
+};
+
+module.exports = { validateSignupData, validateEditProfileData };
