@@ -3,10 +3,14 @@ const connectDB = require("./config/database");
 const User = require("./models/user");
 const { validateSignupData } = require("./utils/Validator");
 const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
+const { userAuth } = require("./middleware/auth");
 
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser()); //middleware
 
 app.post("/signup", async (req, res) => {
   try {
@@ -43,12 +47,38 @@ app.post("/login", async (req, res) => {
       throw new Error("Invalid credentials");
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await user.validatePassword(password);
     if (isPasswordValid) {
+      //Create a JWT token. In this we are hiding userid inside the token using a secret key and sending it back from the server
+      const token = await user.getJWT();
+
+      //Add the token to cookie and send the response back to user
+      res.cookie("token", token, {
+        expires: new Date(Date.now() + 7 * 3600000),
+      });
       res.send("Login successful");
     } else {
       throw new Error("Invalid credentials");
     }
+  } catch (err) {
+    res.status(400).send("Error : " + err.message);
+  }
+});
+
+app.get("/profile", userAuth, async (req, res) => {
+  try {
+    const user = req.user;
+
+    res.send(user);
+  } catch (err) {
+    res.status(400).send("Error : " + err.message);
+  }
+});
+
+app.post("/sendConnectionRequest", userAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    res.send(user.firstName + " sent a connection request");
   } catch (err) {
     res.status(400).send("Error : " + err.message);
   }
@@ -225,5 +255,17 @@ app.use(
 //when a request is sent to the server or an API call is made,it takes the matching route and it goes through the middleware chain(which has next()) and finally goes to the request handler which handles the response
 
 
+//JWT token and authentication
+The user is logging in with email and pwd, the server is validating whether the email and pwd are correct. Thse server creates a JWt token 
+and places inside a cookie and sends  the cookie back with response. Everytime the cookie comes to the server through the request, the
+server validates the cookie and gives the respective data back. the token has a hidden info about which user the cookie belongs to and 
+that is only possible becoz of JWT
 
+the token has three parts : header, payload and signature
+payload stores the secret here userid
+
+
+Why de we need middleware? For all API's to be secure,  we need authentication except signup and login
+For all API's to work, we need to authenticate
+Create auth middleware and validate the token here
 */
